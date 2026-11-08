@@ -1,0 +1,57 @@
+@baseUrl = http://localhost:5080
+
+### 1. GET ALL - Recupera tutti i ticket (200 OK)
+GET {{baseUrl}}/api/tickets
+Accept: application/json
+
+### 2. GET CON FILTRI QUERY STRING - Solo ticket aperti con priorità 1 (200 OK)
+GET {{baseUrl}}/api/tickets?isClosed=false&priority=1
+Accept: application/json
+
+### 3. GET BY ID - Recupera il ticket con ID = 1 (200 OK)
+GET {{baseUrl}}/api/tickets/1
+Accept: application/json
+
+### 4. GET BY ID NON ESISTENTE - Verifica risposta 404 Not Found
+GET {{baseUrl}}/api/tickets/999
+Accept: application/json
+
+### 5. POST - Crea un nuovo ticket (201 Created + Header Location)
+POST {{baseUrl}}/api/tickets
+Content-Type: application/json
+
+{
+  "code": "REQ-005",
+  "title": "Configurazione Docker Compose",
+  "description": "Aggiungere container SQL Server per ambiente di sviluppo",
+  "priority": 2
+}
+
+### 6. POST NON VALIDO - Verifica validazione automatica [ApiController] (400 Bad Request)
+POST {{baseUrl}}/api/tickets
+Content-Type: application/json
+
+{
+  "code": "",
+  "title": "",
+  "description": "Priorità fuori range e campi obbligatori vuoti",
+  "priority": 99
+}
+
+### 7. PUT - Aggiornamento completo del ticket ID = 1 (200 OK)
+PUT {{baseUrl}}/api/tickets/1
+Content-Type: application/json
+
+{
+  "title": "Portale non disponibile [RISOLTO]",
+  "description": "Riavviato pool applicativo IIS/Kestrel",
+  "priority": 2,
+  "isClosed": true
+}
+
+### 8. PATCH - Aggiornamento parziale: chiude il ticket ID = 3 (200 OK)
+PATCH {{baseUrl}}/api/tickets/3/close
+Accept: application/json
+
+### 9. DELETE - Elimina il ticket ID = 2 (204 No Content)
+DELETE {{baseUrl}}/api/tickets/2
