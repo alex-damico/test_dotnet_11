@@ -149,6 +149,28 @@ class Program
         {
             Console.WriteLine($"{grouping.Key}: {grouping.Count()}");
         }
+
+        // 4 Livello
+        Console.WriteLine("----4 Livello----------");
+
+        // 4.1 - Rimozione duplicati per proprietà con DistinctBy:
+        // Restituisce un solo elemento per ciascun valore distinto della chiave scelta (Priority).
+        // Mantiene il PRIMO elemento incontrato per ogni valore di Priority (es. tra INC-001 e REQ-002,
+        // entrambi con Priority 1, mantiene solo INC-001).
+        var distinctByPriority = tickets.DistinctBy(t => t.Priority).ToList();
+        TicketsShow(distinctByPriority);
+
+        // 4.2 - Conversione in dizionario con ToDictionary:
+        // Trasforma la sequenza in un Dictionary<TKey, TValue> (esecuzione immediata).
+        // Permette ricerche istantanee O(1) tramite chiave invece di scorrere tutta la lista con Where/FirstOrDefault.
+        // ATTENZIONE: la chiave deve essere univoca per ogni elemento, altrimenti lancia ArgumentException!
+        // Qui costruiamo una chiave composta concatenando Code + Priority (es. "INC-001-1"):
+        Dictionary<string, Ticket> ticketsByKey = tickets.ToDictionary(t => $"{t.Code}-{t.Priority}");
+        foreach (KeyValuePair<string, Ticket> item in ticketsByKey)
+        {
+            Console.WriteLine($"Chiave: {item.Key} -> Oggetto: {item.Value.GetSummary()}");
+            Console.WriteLine("--------------");
+        }
     }
 
     private static void TicketsShow(List<Ticket> tickets)
