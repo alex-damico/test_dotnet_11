@@ -270,3 +270,209 @@ Applicare SOLID in modo dogmatico porta facilmente all'**over-engineering**. Reg
 * **Evita le interfacce "Header" 1:1 senza motivo:** Creare `IUserService` per `UserService` ha senso se devi mockare il servizio nei test, se hai più implementazioni (OCP) o se stai separando i contratti tra assembly diversi (Clean Architecture). Per classi helper interne e pure (senza I/O), un'interfaccia spesso aggiunge solo rumore.
 * **`DbContext` di Entity Framework Core:** Creare un `IRepository` generico sopra `DbContext` spesso duplica ciò che il framework offre già nativamente (Unit of Work + Repository). Valuta se iniettare un'astrazione sul caso d'uso specifico o usare direttamente `DbContext` incapsulato dietro handler verticali (*Vertical Slice Architecture*).
 * **Pragmatismo su OCP:** Non astrarre preventivamente tutto al primo requisito. Scrivi codice semplice; alla prima o seconda modifica reale dello stesso punto (*Rule of Three*), applica il refactoring verso Strategy o Decorator.
+
+---
+
+# I Design Pattern più usati in C# (.NET)
+
+*(Codice eseguibile nel file separato `DesignPatternsProgram.cs`)*
+
+I **Design Pattern** (introdotti dalla *Gang of Four - GoF*) sono soluzioni architetturali collaudate a problemi ricorrenti nello sviluppo software. Si dividono in **Creazionali**, **Strutturali**, **Comportamentali** e **Architetturali**.
+
+---
+
+## 1. Factory Pattern (Creazionale)
+
+> **Obiettivo:** *Centralizzare la creazione di oggetti appartenenti a una stessa gerarchia senza esporre la logica di istanziazione (`new`) al chiamante.*
+
+Quando il tipo concreto da istanziare dipende da un codice, da una configurazione o da un input esterno, spargere blocchi `switch` o `if/else` in tutta l'applicazione viola i principi SRP e OCP.
+
+### ❌ Problema (Istanziazione sparsa nel codice chiamante)
+
+    // Ogni punto dell'app deve conoscere tutte le sottoclassi e le regole di creazione
+    BaseTicket ticket;
+    if (codice.StartsWith("INC-"))
+        ticket = new IncidentTicket(codice, titolo, gravitaCritica: true);
+    else if (codice.StartsWith("REQ-"))
+        ticket = new ServiceRequestTicket(codice, titolo);
+    else
+        throw new ArgumentException("Codice non valido");
+
+### ✅ Soluzione con Factory Pattern
+
+    public static class TicketFactory
+    {
+        public static BaseTicket CreaDaCodice(string code, string title) => code switch
+        {
+            _ when code.StartsWith("INC-", StringComparison.OrdinalIgnoreCase) 
+                => new IncidentTicket(code, title, gravitaCritica: true),
+            _ when code.StartsWith("REQ-", StringComparison.OrdinalIgnoreCase) 
+                => new ServiceRequestTicket(code, title),
+            _ => throw new ArgumentException($"Prefisso codice '{code}' non riconosciuto.")
+        };
+    }
+
+---
+
+## 2. Builder Pattern (Creazionale — Fluent API)
+
+> **Obiettivo:** *Costruire oggetti complessi passo dopo passo tramite metodi concatenati, separando la costruzione dalla rappresentazione finale.*
+
+In .NET è ovunque: `WebApplication.CreateBuilder()`, `DbContextOptionsBuilder`, `StringBuilder`, `UriBuilder`. Evita l'anti-pattern del *Telescoping Constructor* (costruttori con 8-10 parametri booleani e opzionali difficili da leggere).
+
+### ❌ Problema (Costruttore illeggibile)
+
+    // Cosa significano 'true' e '30'? Bisogna andare a leggere la firma del costruttore!
+    var msg = new DisplayMessage("CODA A4", "Ambra", true, 30, false, null);
+
+### ✅ Soluzione con Builder Pattern
+
+    public record DisplayMessage(string Testo, string Colore, bool Lampeggiante, int DurataSecondi);
+
+    public class DisplayMessageBuilder
+    {
+        private string _testo = "MESSAGGIO VUOTO";
+        private string _colore = "Bianco";
+        private bool _lampeggiante = false;
+        private int _durataSecondi = 10;
+
+        public DisplayMessageBuilder ConTesto(string testo) { _testo = testo; return this; }
+        public DisplayMessageBuilder ConColore(string colore) { _colore = colore; return this; }
+        public DisplayMessageBuilder ConLampeggio(bool lampeggiante) { _lampeggiante = lampeggiante; return this; }
+        public DisplayMessageBuilder ConDurataSecondi(int secondi) { _durataSecondi = secondi; return this; }
+
+        public DisplayMessage Build() => new(_testo, _colore, _lampeggiante, _durataSecondi);
+    }
+
+    // Utilizzo leggibile e autodocumentante:
+    var messaggio = new DisplayMessageBuilder()
+        .ConTesto("CODA TRA USCITA A4 E SERIATE")
+        .ConColore("Ambra")
+        .ConLampeggio(true)
+        .ConDurataSecondi(30)
+        .Build();
+
+---
+
+## 3. Strategy Pattern (Comportamentale)
+
+> **Obiettivo:** *Definire una famiglia di algoritmi, incapsularli in classi separate dietro un'interfaccia comune e renderli intercambiabili a runtime.*
+
+È il pattern principale con cui si realizza l'**Open/Closed Principle (OCP)**: invece di modificare una classe aggiungendo rami `if/else`, si inietta la strategia desiderata.
+
+### ❌ Problema (Algoritmi cablati con if/else)
+
+    public class TicketDispatcher
+    {
+        public void AssegnaTicket(BaseTicket ticket, bool fasciaNotturna)
+        {
+            if (fasciaNotturna)
+                Console.WriteLine("Chiamo reperibile H24...");
+            else
+                Console.WriteLine("Assegno al presidio diurno...");
+        }
+    }
+
+### ✅ Soluzione con Strategy Pattern
+
+    public interface IAssignmentStrategy
+    {
+        string DeterminaDestinatario(BaseTicket ticket);
+    }
+
+    public class AssegnazioneRepartoLocaleStrategy : IAssignmentStrategy
+    {
+        public string DeterminaDestinatario(BaseTicket ticket) => 
+            $"Team Presidio Diurno Sede ({ticket.Code})";
+    }
+
+    public class AssegnazioneReperibilitaNotturnaStrategy : IAssignmentStrategy
+    {
+        public string DeterminaDestinatario(BaseTicket ticket) => 
+            $"Tecnico Reperibile H24 ({ticket.Code})";
+    }
+
+    public class TicketDispatcher(IAssignmentStrategy strategy)
+    {
+        public void AssegnaTicket(BaseTicket ticket)
+        {
+            string destinatario = strategy.DeterminaDestinatario(ticket);
+            Console.WriteLine($"Assegnato a: {destinatario}");
+        }
+    }
+
+---
+
+## 4. Decorator Pattern (Strutturale)
+
+> **Obiettivo:** *Aggiungere dinamicamente responsabilità trasversali (Logging, Caching, Retry, Telemetria) a un oggetto "avvolgendolo" in una classe che implementa la stessa interfaccia.*
+
+Permette di arricchire il comportamento di un servizio senza usare l'ereditarietà e senza modificare il codice della classe originale.
+
+### ❌ Problema (Inquinare la classe di business con log/telemetria)
+
+    public class EmailNotifier : INotifier
+    {
+        public void Send(string message)
+        {
+            Console.WriteLine("[LOG] Inizio invio..."); // Viola SRP!
+            Console.WriteLine($"Invio email: {message}");
+            Console.WriteLine("[LOG] Fine invio.");
+        }
+    }
+
+### ✅ Soluzione con Decorator Pattern
+
+    // Implementa INotifier E riceve un INotifier nel costruttore ("wrapping")
+    public class LoggingNotifierDecorator(INotifier innerNotifier) : INotifier
+    {
+        public void Send(string message)
+        {
+            Console.WriteLine($"[LOG - INIZIO] {DateTimeOffset.Now:HH:mm:ss}");
+            innerNotifier.Send(message); // Delega al servizio reale
+            Console.WriteLine("[LOG - FINE] Completato.");
+        }
+    }
+
+---
+
+## 5. Repository Pattern (Architetturale / Data Access)
+
+> **Obiettivo:** *Mediare tra il dominio di business e il layer di accesso ai dati (SQL Server / EF Core), esponendo le operazioni come se fossero una collezione in memoria.*
+
+### Perché lo chiedono sempre ai colloqui:
+1. **Disaccoppiamento:** Il codice di business dipende da `ITicketRepository` e non sa se i dati sono su SQL Server, MongoDB o un servizio esterno.
+2. **Unit Testing:** Permette di testare i Service applicativi passando un `InMemoryTicketRepository` o un Mock (es. con *Moq* o *NSubstitute*) senza dover avviare un database reale.
+3. **Centralizzazione delle query:** Evita di copiare e incollare le stesse query LINQ complesse in più Controller.
+
+### ✅ Esempio di implementazione
+
+    public interface ITicketRepository
+    {
+        BaseTicket? GetByCode(string code);
+        void Save(BaseTicket ticket);
+    }
+
+    public class InMemoryTicketRepository : ITicketRepository
+    {
+        private readonly Dictionary<string, BaseTicket> _storage = new(StringComparer.OrdinalIgnoreCase);
+
+        public void Save(BaseTicket ticket) => _storage[ticket.Code] = ticket;
+
+        public BaseTicket? GetByCode(string code) =>
+            _storage.TryGetValue(code, out var ticket) ? ticket : null;
+    }
+
+---
+
+## Come eseguire i 2 `Main` in `test_fondamental`
+
+Nel progetto `test_fondamental` sono presenti due entry point distinti:
+1. **`Program.cs`** (`test_fondamental.Program`): esegue i primi 3 blocchi (**OOP**, **`class` vs `record` vs `struct`**, **Principi SOLID**).
+2. **`DesignPatternsProgram.cs`** (`test_fondamental.DesignPatternsProgram`): esegue gli esempi dei **5 Design Pattern**.
+
+Per avviarli:
+* **Da JetBrains Rider:** apri `Program.cs` oppure `DesignPatternsProgram.cs` e clicca sull'icona **Play verde** accanto a `static void Main(string[] args)`.
+* **Da terminale:**
+  * `dotnet run --project ./test_fondamental/test_fondamental.csproj` *(avvia `Program`)*
+  * `dotnet run --project ./test_fondamental/test_fondamental.csproj -p:StartupObject=test_fondamental.DesignPatternsProgram` *(avvia `DesignPatternsProgram`)*

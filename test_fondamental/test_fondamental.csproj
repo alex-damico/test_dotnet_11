@@ -5,6 +5,8 @@
     <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Punto di ingresso: cambia tra test_fondamental.Program e test_fondamental.DesignPatternsProgram -->
+    <StartupObject>test_fondamental.DesignPatternsProgram</StartupObject>
   </PropertyGroup>
 
 </Project>

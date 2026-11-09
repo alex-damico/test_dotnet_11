@@ -2,6 +2,7 @@ namespace test_fondamental;
 
 // =========================================================================
 // RIEPILOGO PER COLLOQUIO: OOP, TIPI C# (class/record/struct) E PRINCIPI SOLID
+// (Nota: per i Design Pattern vedi il file separato 'DesignPatternsProgram.cs')
 // =========================================================================
 // PARTE 1 - I 4 PILASTRI DELL'OOP:
 //   1. Incapsulamento: nascondere e proteggere lo stato interno (campi 'private', proprietà 'private set').
@@ -23,10 +24,17 @@ namespace test_fondamental;
 //   - [D] Dependency Inversion:  dipendere sempre da astrazioni (interfacce) e mai da classi concrete.
 // =========================================================================
 
-class Program
+public class Program
 {
-    static void Main(string[] args)
+    public static void Main(string[] args)
     {
+        // Se avviato col profilo "Design Patterns" di Rider (--patterns), esegue direttamente il Main di DesignPatternsProgram
+        if (args.Contains("--patterns"))
+        {
+            DesignPatternsProgram.Main(args);
+            return;
+        }
+
         // =====================================================================
         // SEZIONE 1: I 4 PILASTRI DELL'OOP IN AZIONE
         // =====================================================================

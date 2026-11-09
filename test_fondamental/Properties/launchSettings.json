@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "test_fondamental (Design Patterns)": {
+      "commandName": "Project",
+      "commandLineArgs": "--patterns"
+    },
+    "test_fondamental (OOP & SOLID)": {
+      "commandName": "Project",
+      "commandLineArgs": "--oop"
+    }
+  }
+}
